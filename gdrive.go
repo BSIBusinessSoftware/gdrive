@@ -798,6 +798,22 @@ func main() {
 			},
 		},
 		&cli.Handler{
+			Pattern:     "[global] id [options] <absPath>",
+			Description: "Show fileId",
+			Callback:    idHandler,
+			FlagGroups: cli.FlagGroups{
+				cli.NewFlagGroup("global", globalFlags...),
+				cli.NewFlagGroup("options",
+					cli.BoolFlag{
+						Name:        "error",
+						Patterns:    []string{"-e", "--error"},
+						Description: "Print error message if absPath does not exist.",
+						OmitValue:   true,
+					},
+				),
+			},
+		},
+		&cli.Handler{
 			Pattern:     "[global] about [options]",
 			Description: "Google drive metadata, quota usage",
 			Callback:    aboutHandler,
