@@ -8,7 +8,7 @@ import (
 )
 
 const Name = "gdrive"
-const Version = "2.1.0"
+const Version = "2.1.1"
 
 const DefaultMaxFiles = 30
 const DefaultMaxChanges = 100
@@ -792,6 +792,22 @@ func main() {
 						Name:        "printMimes",
 						Patterns:    []string{"--print-mimes"},
 						Description: "Print available mime types for given file",
+						OmitValue:   true,
+					},
+				),
+			},
+		},
+		&cli.Handler{
+			Pattern:     "[global] id [options] <absPath>",
+			Description: "Show fileId",
+			Callback:    idHandler,
+			FlagGroups: cli.FlagGroups{
+				cli.NewFlagGroup("global", globalFlags...),
+				cli.NewFlagGroup("options",
+					cli.BoolFlag{
+						Name:        "error",
+						Patterns:    []string{"-e", "--error"},
+						Description: "Print error message if absPath does not exist.",
 						OmitValue:   true,
 					},
 				),

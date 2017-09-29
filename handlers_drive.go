@@ -340,6 +340,16 @@ func aboutExportHandler(ctx cli.Context) {
 	checkErr(err)
 }
 
+func idHandler(ctx cli.Context) {
+	args := ctx.Args()
+	err := newDrive(args).Id(drive.IdArgs{
+		Out:     os.Stdout,
+		AbsPath: args.String("absPath"),
+		Error:   args.Bool("error"),
+	})
+	checkErr(err)
+}
+
 func getOauthClient(args cli.Arguments) (*http.Client, error) {
 	if args.String("refreshToken") != "" && args.String("accessToken") != "" {
 		ExitF("Access token not needed when refresh token is provided")

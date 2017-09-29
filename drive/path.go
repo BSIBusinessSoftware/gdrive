@@ -2,8 +2,12 @@ package drive
 
 import (
 	"fmt"
-	"google.golang.org/api/drive/v3"
 	"path/filepath"
+	"strings"
+
+	"golang.org/x/net/context"
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 )
 
 func (self *Drive) newPathfinder() *remotePathfinder {
@@ -62,4 +66,73 @@ func (self *remotePathfinder) getParent(id string) (*drive.File, error) {
 	self.files[f.Id] = f
 
 	return f, nil
+}
+
+type drivePathResolver struct {
+	service *drive.FilesService
+}
+
+func (drive *Drive) newPathResolver() *drivePathResolver {
+	return &drivePathResolver{
+		service: drive.service.Files,
+	}
+}
+
+func (resolver *drivePathResolver) getFileID(abspath string) (string, error) {
+	if !strings.HasPrefix(abspath, "/") {
+		return "", fmt.Errorf("'%s' is not absolute path", abspath)
+	}
+
+	abspath = strings.Trim(abspath, "/")
+	if abspath == "" {
+		return "root", nil
+	}
+	pathes := strings.Split(abspath, "/")
+	var parent = "root"
+	for _, path := range pathes {
+		entries, err := resolver.queryEntryByName(path, parent)
+		if err != nil {
+			return "", err
+		}
+		parent = entries[0].Id
+	}
+	return parent, nil
+}
+
+func (resolver *drivePathResolver) secureFileId(expr string) (string, error) {
+	if strings.Contains(expr, "/") {
+		id, err := resolver.getFileID(expr)
+		if err != nil {
+			return "", err
+		}
+		return id, nil
+	} else {
+		return expr, nil
+	}
+}
+
+func (resolver *drivePathResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
+	conditions := []string{
+		"trashed = false",
+		fmt.Sprintf("name = '%v'", name),
+		fmt.Sprintf("'%v' in parents", parent),
+	}
+	query := strings.Join(conditions, " and ")
+	fields := []googleapi.Field{"nextPageToken", "files(id,name,parents)"}
+
+	var files []*drive.File
+	resolver.service.List().Q(query).Fields(fields...).Pages(context.TODO(), func(fl *drive.FileList) error {
+		files = append(files, fl.Files...)
+		return nil
+	})
+
+	if len(files) == 0 {
+		return nil, fmt.Errorf("name not found: '%v'", name)
+	}
+
+	if len(files) != 1 {
+		return nil, fmt.Errorf("ambiguous name: '%v'", name)
+	}
+
+	return files, nil
 }
