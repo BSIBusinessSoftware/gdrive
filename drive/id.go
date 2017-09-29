@@ -3,7 +3,6 @@ package drive
 import (
 	"fmt"
 	"io"
-	"strings"
 )
 
 type IdArgs struct {
@@ -13,11 +12,13 @@ type IdArgs struct {
 }
 
 func (self *Drive) Id(args IdArgs) error {
-	fmt.Fprintf(args.Out, "AbsPath='%v', Error='%v'\n", args.AbsPath, args.Error)
+	//fmt.Fprintf(args.Out, "AbsPath='%v', Error='%v'\n", args.AbsPath, args.Error)
 
-	if !strings.HasPrefix(args.AbsPath, "/") {
-		return fmt.Errorf("'%s' is not absolute path", args.AbsPath)
+	resolver := self.newPathResolver()
+	Id, err := resolver.getFileID(args.AbsPath)
+	if err != nil && args.Error == true {
+		return err
 	}
-
+	fmt.Print(Id)
 	return nil
 }
