@@ -99,16 +99,14 @@ func (resolver *drivePathResolver) getFileID(abspath string) (string, error) {
 	return parent, nil
 }
 
-func (resolver *drivePathResolver) secureFileId(expr string) (string, error) {
+func (resolver *drivePathResolver) secureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
 		id, err := resolver.getFileID(expr)
-		if err != nil {
-			return "", err
+		if err == nil {
+			return id
 		}
-		return id, nil
-	} else {
-		return expr, nil
 	}
+	return expr
 }
 
 func (resolver *drivePathResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
