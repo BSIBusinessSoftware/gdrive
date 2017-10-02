@@ -78,7 +78,7 @@ func (drive *Drive) newPathResolver() *drivePathResolver {
 	}
 }
 
-func (resolver *drivePathResolver) getFileID(abspath string) (string, error) {
+func (self *drivePathResolver) getFileID(abspath string) (string, error) {
 	if !strings.HasPrefix(abspath, "/") {
 		return "", fmt.Errorf("'%s' is not absolute path", abspath)
 	}
@@ -90,7 +90,7 @@ func (resolver *drivePathResolver) getFileID(abspath string) (string, error) {
 	pathes := strings.Split(abspath, "/")
 	var parent = "root"
 	for _, path := range pathes {
-		entries, err := resolver.queryEntryByName(path, parent)
+		entries, err := self.queryEntryByName(path, parent)
 		if err != nil {
 			return "", err
 		}
@@ -99,9 +99,9 @@ func (resolver *drivePathResolver) getFileID(abspath string) (string, error) {
 	return parent, nil
 }
 
-func (resolver *drivePathResolver) secureFileId(expr string) string {
+func (self *drivePathResolver) secureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
-		id, err := resolver.getFileID(expr)
+		id, err := self.getFileID(expr)
 		if err == nil {
 			return id
 		}
@@ -109,7 +109,7 @@ func (resolver *drivePathResolver) secureFileId(expr string) string {
 	return expr
 }
 
-func (resolver *drivePathResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
+func (self *drivePathResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
 	conditions := []string{
 		"trashed = false",
 		fmt.Sprintf("name = '%v'", name),
@@ -119,7 +119,7 @@ func (resolver *drivePathResolver) queryEntryByName(name string, parent string) 
 	fields := []googleapi.Field{"nextPageToken", "files(id,name,parents)"}
 
 	var files []*drive.File
-	resolver.service.List().Q(query).Fields(fields...).Pages(context.TODO(), func(fl *drive.FileList) error {
+	self.service.List().Q(query).Fields(fields...).Pages(context.TODO(), func(fl *drive.FileList) error {
 		files = append(files, fl.Files...)
 		return nil
 	})
