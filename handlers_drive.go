@@ -51,16 +51,16 @@ func downloadHandler(ctx cli.Context) {
 	args := ctx.Args()
 	checkDownloadArgs(args)
 	err := newDrive(args).Download(drive.DownloadArgs{
-		Out:       os.Stdout,
-		Id:        args.String("fileId"),
-		Force:     args.Bool("force"),
-		Skip:      args.Bool("skip"),
-		Path:      args.String("path"),
-		Delete:    args.Bool("delete"),
-		Recursive: args.Bool("recursive"),
-		Stdout:    args.Bool("stdout"),
-		Progress:  progressWriter(args.Bool("noProgress")),
-		Timeout:   durationInSeconds(args.Int64("timeout")),
+		Out:        os.Stdout,
+		Identifier: args.String("fileId"),
+		Force:      args.Bool("force"),
+		Skip:       args.Bool("skip"),
+		Path:       args.String("path"),
+		Delete:     args.Bool("delete"),
+		Recursive:  args.Bool("recursive"),
+		Stdout:     args.Bool("stdout"),
+		Progress:   progressWriter(args.Bool("noProgress")),
+		Timeout:    durationInSeconds(args.Int64("timeout")),
 	})
 	checkErr(err)
 }
@@ -351,16 +351,19 @@ func idHandler(ctx cli.Context) {
 }
 
 func getOauthClient(args cli.Arguments) (*http.Client, error) {
+
+	client := auth.NewAuthorizedClient(ClientId, ClientSecret)
+
 	if args.String("refreshToken") != "" && args.String("accessToken") != "" {
 		ExitF("Access token not needed when refresh token is provided")
 	}
 
 	if args.String("refreshToken") != "" {
-		return auth.NewRefreshTokenClient(ClientId, ClientSecret, args.String("refreshToken")), nil
+		return auth.NewRefreshTokenClient(client.Id, client.Secret, args.String("refreshToken")), nil
 	}
 
 	if args.String("accessToken") != "" {
-		return auth.NewAccessTokenClient(ClientId, ClientSecret, args.String("accessToken")), nil
+		return auth.NewAccessTokenClient(client.Id, client.Secret, args.String("accessToken")), nil
 	}
 
 	configDir := getConfigDir(args)
@@ -375,7 +378,7 @@ func getOauthClient(args cli.Arguments) (*http.Client, error) {
 	}
 
 	tokenPath := ConfigFilePath(configDir, TokenFilename)
-	return auth.NewFileSourceClient(ClientId, ClientSecret, tokenPath, authCodePrompt)
+	return auth.NewFileSourceClient(client.Id, client.Secret, tokenPath, authCodePrompt)
 }
 
 func getConfigDir(args cli.Arguments) string {

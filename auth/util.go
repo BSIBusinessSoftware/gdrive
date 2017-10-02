@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -19,4 +21,19 @@ func fileExists(path string) bool {
 		return true
 	}
 	return false
+}
+
+func GetConfigDir() string {
+	return filepath.Join(os.Getenv("HOME"), ".config", "gdrive")
+}
+
+func ReadJsonFile(path string) (interface{}, error) {
+
+	content, _ := ioutil.ReadFile(path)
+	var data interface{}
+	err := json.Unmarshal(content, &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
