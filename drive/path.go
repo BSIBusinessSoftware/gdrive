@@ -78,7 +78,7 @@ func (drive *Drive) newIdResolver() *driveIdResolver {
 	}
 }
 
-func (self *driveIdResolver) getFileID(abspath string) (string, error) {
+func (self *driveIdResolver) getFileId(abspath string) (string, error) {
 	if !strings.HasPrefix(abspath, "/") {
 		return "", fmt.Errorf("'%s' is not absolute path", abspath)
 	}
@@ -90,18 +90,18 @@ func (self *driveIdResolver) getFileID(abspath string) (string, error) {
 	pathes := strings.Split(abspath, "/")
 	var parent = "root"
 	for _, path := range pathes {
-		entries, err := self.queryEntryByName(path, parent)
-		if err != nil {
-			return "", err
+		entry := self.queryEntryByName(path, parent)
+		if entry == nil {
+			return "", fmt.Errorf("path not found: '%v'", abspath)
 		}
-		parent = entries[0].Id
+		parent = entry.Id
 	}
 	return parent, nil
 }
 
 func (self *driveIdResolver) secureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
-		id, err := self.getFileID(expr)
+		id, err := self.getFileId(expr)
 		if err == nil {
 			return id
 		}
@@ -109,7 +109,7 @@ func (self *driveIdResolver) secureFileId(expr string) string {
 	return expr
 }
 
-func (self *driveIdResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
+func (self *driveIdResolver) queryEntryByName(name string, parent string) *drive.File {
 	conditions := []string{
 		"trashed = false",
 		fmt.Sprintf("name = '%v'", name),
@@ -125,12 +125,8 @@ func (self *driveIdResolver) queryEntryByName(name string, parent string) ([]*dr
 	})
 
 	if len(files) == 0 {
-		return nil, fmt.Errorf("name not found: '%v'", name)
+		return nil
 	}
 
-	if len(files) != 1 {
-		return nil, fmt.Errorf("ambiguous name: '%v'", name)
-	}
-
-	return files, nil
+	return files[0]
 }
