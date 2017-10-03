@@ -24,15 +24,13 @@ type DownloadArgs struct {
 	Timeout   time.Duration
 }
 
-func (self *Drive) normalize(args *DownloadArgs) *DownloadArgs {
-	resolver := self.newIDResolver()
+func (args *DownloadArgs) normalize(drive *Drive) {
+	resolver := drive.newIdResolver()
 	args.Id = resolver.secureFileId(args.Id)
-
-	return args
 }
 
 func (self *Drive) Download(args DownloadArgs) error {
-	self.normalize(&args)
+	args.normalize(self)
 
 	if args.Recursive {
 		return self.downloadRecursive(args)
@@ -83,7 +81,13 @@ type DownloadQueryArgs struct {
 	Recursive bool
 }
 
+func (args *DownloadQueryArgs) normalize(drive *Drive) {
+	// do nothing
+}
+
 func (self *Drive) DownloadQuery(args DownloadQueryArgs) error {
+	args.normalize(self)
+
 	listArgs := listAllFilesArgs{
 		query:  args.Query,
 		fields: []googleapi.Field{"nextPageToken", "files(id,name,mimeType,size,md5Checksum)"},

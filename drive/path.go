@@ -68,17 +68,17 @@ func (self *remotePathfinder) getParent(id string) (*drive.File, error) {
 	return f, nil
 }
 
-type driveIDResolver struct {
+type driveIdResolver struct {
 	service *drive.FilesService
 }
 
-func (drive *Drive) newIDResolver() *driveIDResolver {
-	return &driveIDResolver{
+func (drive *Drive) newIdResolver() *driveIdResolver {
+	return &driveIdResolver{
 		service: drive.service.Files,
 	}
 }
 
-func (self *driveIDResolver) getFileID(abspath string) (string, error) {
+func (self *driveIdResolver) getFileID(abspath string) (string, error) {
 	if !strings.HasPrefix(abspath, "/") {
 		return "", fmt.Errorf("'%s' is not absolute path", abspath)
 	}
@@ -99,7 +99,7 @@ func (self *driveIDResolver) getFileID(abspath string) (string, error) {
 	return parent, nil
 }
 
-func (self *driveIDResolver) secureFileId(expr string) string {
+func (self *driveIdResolver) secureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
 		id, err := self.getFileID(expr)
 		if err == nil {
@@ -109,7 +109,7 @@ func (self *driveIDResolver) secureFileId(expr string) string {
 	return expr
 }
 
-func (self *driveIDResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
+func (self *driveIdResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
 	conditions := []string{
 		"trashed = false",
 		fmt.Sprintf("name = '%v'", name),

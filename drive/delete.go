@@ -11,7 +11,14 @@ type DeleteArgs struct {
 	Recursive bool
 }
 
+func (args *DeleteArgs) normalize(drive *Drive) {
+	resolver := drive.newIdResolver()
+	args.Id = resolver.secureFileId(args.Id)
+}
+
 func (self *Drive) Delete(args DeleteArgs) error {
+	args.normalize(self)
+
 	f, err := self.service.Files.Get(args.Id).Fields("name", "mimeType").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)

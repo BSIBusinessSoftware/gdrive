@@ -2,8 +2,9 @@ package drive
 
 import (
 	"fmt"
-	"google.golang.org/api/drive/v3"
 	"io"
+
+	"google.golang.org/api/drive/v3"
 )
 
 type FileInfoArgs struct {
@@ -12,7 +13,14 @@ type FileInfoArgs struct {
 	SizeInBytes bool
 }
 
+func (args *FileInfoArgs) normalize(drive *Drive) {
+	resolver := drive.newIdResolver()
+	args.Id = resolver.secureFileId(args.Id)
+}
+
 func (self *Drive) Info(args FileInfoArgs) error {
+	args.normalize(self)
+
 	f, err := self.service.Files.Get(args.Id).Fields("id", "name", "size", "createdTime", "modifiedTime", "md5Checksum", "mimeType", "parents", "shared", "description", "webContentLink", "webViewLink").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)

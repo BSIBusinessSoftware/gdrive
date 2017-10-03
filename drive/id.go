@@ -14,7 +14,7 @@ type IdArgs struct {
 func (self *Drive) Id(args IdArgs) error {
 	//fmt.Fprintf(args.Out, "AbsPath='%v', Error='%v'\n", args.AbsPath, args.Error)
 
-	resolver := self.newIDResolver()
+	resolver := self.newIdResolver()
 	Id, err := resolver.getFileID(args.AbsPath)
 	if err != nil && args.Error == true {
 		return err
