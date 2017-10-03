@@ -36,12 +36,9 @@ func listHandler(ctx cli.Context) {
 func lsHandler(ctx cli.Context) {
 	args := ctx.Args()
 	err := newDrive(args).ListDirectory(drive.ListDirectoryArgs{
-		Out:         os.Stdout,
-		Parent:      args.String("fileId"),
-		NameWidth:   args.Int64("nameWidth"),
-		SortOrder:   args.String("sortOrder"),
-		SkipHeader:  args.Bool("skipHeader"),
-		SizeInBytes: args.Bool("sizeInBytes"),
+		Out:       os.Stdout,
+		Id:        args.String("fileId"),
+		Recursive: args.Bool("recursive"),
 	})
 	checkErr(err)
 }

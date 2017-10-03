@@ -10,6 +10,14 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
+var defaultGetFields []googleapi.Field
+var defaultQueryFields []googleapi.Field
+
+func init() {
+	defaultGetFields = []googleapi.Field{"id", "name", "md5Checksum", "mimeType", "size", "createdTime", "parents"}
+	defaultQueryFields = []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents)"}
+}
+
 func (self *Drive) newPathfinder() *remotePathfinder {
 	return &remotePathfinder{
 		service: self.service.Files,
@@ -32,7 +40,7 @@ func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
 	var path []string
 
 	for {
-		parent, err := self.getParent(f.Parents[0])
+		parent, err := self.getFile(f.Parents[0])
 		if err != nil {
 			return "", err
 		}
@@ -50,14 +58,23 @@ func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
 	return filepath.Join(path...), nil
 }
 
-func (self *remotePathfinder) getParent(id string) (*drive.File, error) {
+func (self *remotePathfinder) getAbsPath(f *drive.File, sep string) (string, error) {
+	path, err := self.absPath(f)
+	if err != nil {
+		return "", err
+	}
+	items := strings.Split(path, string(filepath.Separator))
+	return sep + strings.Join(items, sep), nil
+}
+
+func (self *remotePathfinder) getFile(id string) (*drive.File, error) {
 	// Check cache
 	if f, ok := self.files[id]; ok {
 		return f, nil
 	}
 
 	// Fetch file from drive
-	f, err := self.service.Get(id).Fields("id", "name", "parents").Do()
+	f, err := self.service.Get(id).Fields(defaultGetFields...).Do()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get file: %s", err)
 	}
@@ -116,10 +133,9 @@ func (self *driveIdResolver) queryEntryByName(name string, parent string) *drive
 		fmt.Sprintf("'%v' in parents", parent),
 	}
 	query := strings.Join(conditions, " and ")
-	fields := []googleapi.Field{"nextPageToken", "files(id,name,parents)"}
 
 	var files []*drive.File
-	self.service.List().Q(query).Fields(fields...).Pages(context.TODO(), func(fl *drive.FileList) error {
+	self.service.List().Q(query).Fields(defaultQueryFields...).Pages(context.TODO(), func(fl *drive.FileList) error {
 		files = append(files, fl.Files...)
 		return nil
 	})

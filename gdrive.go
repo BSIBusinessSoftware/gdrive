@@ -131,9 +131,15 @@ func main() {
 					},
 					cli.BoolFlag{
 						Name:        "recursive",
-						Patterns:    []string{"--r", "--recursive"},
-						Description: "List subdirectories recursively",
-						OmitValue:   false,
+						Patterns:    []string{"-r", "--recursive"},
+						Description: "List directory contents",
+						OmitValue:   true,
+					},
+					cli.BoolFlag{
+						Name:        "id",
+						Patterns:    []string{"--id"},
+						Description: "Print file ID",
+						OmitValue:   true,
 					},
 				),
 			},
