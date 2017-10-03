@@ -12,25 +12,33 @@ import (
 )
 
 type DownloadArgs struct {
-	Out        io.Writer
-	Progress   io.Writer
-	Identifier string
-	Path       string
-	Force      bool
-	Skip       bool
-	Recursive  bool
-	Delete     bool
-	Stdout     bool
-	Timeout    time.Duration
+	Out       io.Writer
+	Progress  io.Writer
+	Id        string
+	Path      string
+	Force     bool
+	Skip      bool
+	Recursive bool
+	Delete    bool
+	Stdout    bool
+	Timeout   time.Duration
+}
+
+func (self *Drive) normalize(args *DownloadArgs) *DownloadArgs {
+	resolver := self.newIDResolver()
+	args.Id = resolver.secureFileId(args.Id)
+
+	return args
 }
 
 func (self *Drive) Download(args DownloadArgs) error {
+	self.normalize(&args)
+
 	if args.Recursive {
 		return self.downloadRecursive(args)
 	}
 
-	id := self.newIDResolver().secureFileId(args.Identifier)
-	f, err := self.service.Files.Get(id).Fields("id", "name", "size", "mimeType", "md5Checksum").Do()
+	f, err := self.service.Files.Get(args.Id).Fields("id", "name", "size", "mimeType", "md5Checksum").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)
 	}
@@ -53,13 +61,13 @@ func (self *Drive) Download(args DownloadArgs) error {
 	}
 
 	if args.Delete {
-		err = self.deleteFile(id)
+		err = self.deleteFile(args.Id)
 		if err != nil {
 			return fmt.Errorf("Failed to delete file: %s", err)
 		}
 
 		if !args.Stdout {
-			fmt.Fprintf(args.Out, "Removed %s\n", args.Identifier)
+			fmt.Fprintf(args.Out, "Removed %s\n", args.Id)
 		}
 	}
 	return err
@@ -109,8 +117,7 @@ func (self *Drive) DownloadQuery(args DownloadQueryArgs) error {
 }
 
 func (self *Drive) downloadRecursive(args DownloadArgs) error {
-	id := self.newIDResolver().secureFileId(args.Identifier)
-	f, err := self.service.Files.Get(id).Fields("id", "name", "size", "mimeType", "md5Checksum").Do()
+	f, err := self.service.Files.Get(args.Id).Fields("id", "name", "size", "mimeType", "md5Checksum").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)
 	}
@@ -241,7 +248,7 @@ func (self *Drive) downloadDirectory(parent *drive.File, args DownloadArgs) erro
 		// Copy args and update changed fields
 		newArgs := args
 		newArgs.Path = newPath
-		newArgs.Identifier = f.Id
+		newArgs.Id = f.Id
 		newArgs.Stdout = false
 
 		err = self.downloadRecursive(newArgs)
