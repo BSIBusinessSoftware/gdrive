@@ -106,29 +106,6 @@ func main() {
 			FlagGroups: cli.FlagGroups{
 				cli.NewFlagGroup("global", globalFlags...),
 				cli.NewFlagGroup("options",
-					cli.StringFlag{
-						Name:        "sortOrder",
-						Patterns:    []string{"--order"},
-						Description: "Sort order. See https://godoc.org/google.golang.org/api/drive/v3#FilesListCall.OrderBy",
-					},
-					cli.IntFlag{
-						Name:         "nameWidth",
-						Patterns:     []string{"--name-width"},
-						Description:  fmt.Sprintf("Width of name column, default: %d, minimum: 9, use 0 for full width", DefaultNameWidth),
-						DefaultValue: DefaultNameWidth,
-					},
-					cli.BoolFlag{
-						Name:        "skipHeader",
-						Patterns:    []string{"--no-header"},
-						Description: "Dont print the header",
-						OmitValue:   true,
-					},
-					cli.BoolFlag{
-						Name:        "sizeInBytes",
-						Patterns:    []string{"--bytes"},
-						Description: "Size in bytes",
-						OmitValue:   true,
-					},
 					cli.BoolFlag{
 						Name:        "recursive",
 						Patterns:    []string{"-r", "--recursive"},
@@ -136,9 +113,9 @@ func main() {
 						OmitValue:   true,
 					},
 					cli.BoolFlag{
-						Name:        "id",
-						Patterns:    []string{"--id"},
-						Description: "Print file ID",
+						Name:        "doc",
+						Patterns:    []string{"-d", "--document"},
+						Description: "List Google documents",
 						OmitValue:   true,
 					},
 				),

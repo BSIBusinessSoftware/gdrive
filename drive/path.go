@@ -152,3 +152,13 @@ func (self *remotePathFinder) queryEntryByName(name string, parent string) *driv
 
 	return files[0]
 }
+
+func isDoc(f *drive.File) bool {
+	if isDir(f) {
+		return false
+	}
+	if isBinary(f) {
+		return false
+	}
+	return true
+}

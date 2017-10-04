@@ -13,6 +13,7 @@ type ListDirectoryArgs struct {
 	Out       io.Writer
 	Id        string
 	Recursive bool
+	ShowDoc   bool
 }
 
 func (args *ListDirectoryArgs) normalize(drive *Drive) {
@@ -28,31 +29,29 @@ func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 		return fmt.Errorf("Failed to get file: %s", err)
 	}
 	if isDir(f) {
-		printer := NewDirectoryPrinter(self, args)
+		printer := NewDirectoryPrinter(self, &args)
 		printer.Print(f, "")
 	}
 	return
 }
 
 type DirectoryPrinter struct {
-	Out        io.Writer
 	Drive      *Drive
 	PathFinder *remotePathFinder
-	Recursive  bool
+	Args       *ListDirectoryArgs
 }
 
-func NewDirectoryPrinter(drive *Drive, args ListDirectoryArgs) *DirectoryPrinter {
+func NewDirectoryPrinter(drive *Drive, args *ListDirectoryArgs) *DirectoryPrinter {
 	return &DirectoryPrinter{
-		Out:        args.Out,
 		Drive:      drive,
 		PathFinder: drive.newPathFinder(),
-		Recursive:  args.Recursive,
+		Args:       args,
 	}
 }
 
 func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 	w := new(tabwriter.Writer)
-	w.Init(printer.Out, 0, 0, 3, ' ', 0)
+	w.Init(printer.Args.Out, 0, 0, 3, ' ', 0)
 
 	if len(absPath) == 0 {
 		name, err := printer.PathFinder.getAbsPath(file)
@@ -82,6 +81,10 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 	var directories []directory
 
 	for _, f := range files {
+		if isDoc(f) && !printer.Args.ShowDoc {
+			continue
+		}
+
 		fullpath := printer.PathFinder.JoinPath(absPath, f.Name)
 		if isDir(f) {
 			directories = append(directories, directory{f, fullpath})
@@ -94,7 +97,7 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 		fmt.Fprintf(w, "%v%v\n", fullpath, term)
 	}
 
-	if printer.Recursive {
+	if printer.Args.Recursive {
 		fmt.Fprintf(w, "\n")
 		for _, d := range directories {
 			printer.Print(d.f, d.fullpath)

@@ -39,6 +39,7 @@ func lsHandler(ctx cli.Context) {
 		Out:       os.Stdout,
 		Id:        args.String("fileId"),
 		Recursive: args.Bool("recursive"),
+		ShowDoc:   args.Bool("doc"),
 	})
 	checkErr(err)
 }
