@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strings"
 	"text/tabwriter"
 
 	drive "google.golang.org/api/drive/v3"
 )
-
-const SEP = "/"
 
 type ListDirectoryArgs struct {
 	Out       io.Writer
@@ -58,7 +55,7 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 	w.Init(printer.Out, 0, 0, 3, ' ', 0)
 
 	if len(absPath) == 0 {
-		name, err := printer.PathFinder.getAbsPath(file, SEP)
+		name, err := printer.PathFinder.getAbsPath(file)
 		if err != nil {
 			return err
 		}
@@ -85,14 +82,14 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 	var directories []directory
 
 	for _, f := range files {
-		fullpath := strings.Join([]string{absPath, f.Name}, SEP)
+		fullpath := printer.PathFinder.JoinPath(absPath, f.Name)
 		if isDir(f) {
 			directories = append(directories, directory{f, fullpath})
 		}
 
 		term := ""
 		if isDir(f) {
-			term = SEP
+			term = RemotePathSep
 		}
 		fmt.Fprintf(w, "%v%v\n", fullpath, term)
 	}

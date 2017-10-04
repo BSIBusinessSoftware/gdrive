@@ -10,6 +10,8 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
+const RemotePathSep = "/"
+
 var defaultGetFields []googleapi.Field
 var defaultQueryFields []googleapi.Field
 
@@ -58,13 +60,27 @@ func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
 	return filepath.Join(path...), nil
 }
 
-func (self *remotePathfinder) getAbsPath(f *drive.File, sep string) (string, error) {
+func (self *remotePathfinder) getAbsPath(f *drive.File) (string, error) {
+
+	if len(f.Parents) == 0 {
+		return RemotePathSep, nil
+	}
+
 	path, err := self.absPath(f)
 	if err != nil {
 		return "", err
 	}
 	items := strings.Split(path, string(filepath.Separator))
-	return sep + strings.Join(items, sep), nil
+	return RemotePathSep + strings.Join(items, RemotePathSep), nil
+}
+
+func (self *remotePathfinder) JoinPath(pathes ...string) string {
+	items := []string{}
+	for _, path := range pathes {
+		path = strings.TrimSuffix(path, RemotePathSep)
+		items = append(items, path)
+	}
+	return strings.Join(items, RemotePathSep)
 }
 
 func (self *remotePathfinder) getFile(id string) (*drive.File, error) {
