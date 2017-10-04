@@ -8,8 +8,9 @@ import (
 	"text/tabwriter"
 
 	drive "google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 )
+
+const SEP = "/"
 
 type ListDirectoryArgs struct {
 	Out       io.Writer
@@ -57,7 +58,7 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 	w.Init(printer.Out, 0, 0, 3, ' ', 0)
 
 	if len(absPath) == 0 {
-		name, err := printer.PathFinder.getAbsPath(file, "/")
+		name, err := printer.PathFinder.getAbsPath(file, SEP)
 		if err != nil {
 			return err
 		}
@@ -66,9 +67,10 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 	fmt.Fprintf(w, "+ %v:\n", absPath)
 
 	listArgs := listAllFilesArgs{
-		query:    fmt.Sprintf("trashed = false and 'me' in owners and '%v' in parents", file.Id),
-		fields:   []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents)"},
-		maxFiles: math.MaxInt64,
+		query:     fmt.Sprintf("trashed = false and 'me' in owners and '%v' in parents", file.Id),
+		fields:    nil,
+		sortOrder: "folder, name",
+		maxFiles:  math.MaxInt64,
 	}
 
 	files, err := printer.Drive.listAllFiles(listArgs)
@@ -76,16 +78,29 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 		return fmt.Errorf("Failed to list files: %s", err)
 	}
 
-	for _, f := range files {
-		fmt.Fprintf(w, "%v\n", strings.Join([]string{absPath, f.Name}, "/"))
+	type directory struct {
+		f        *drive.File
+		fullpath string
 	}
-	fmt.Fprintf(w, "\n")
+	var directories []directory
+
+	for _, f := range files {
+		fullpath := strings.Join([]string{absPath, f.Name}, SEP)
+		if isDir(f) {
+			directories = append(directories, directory{f, fullpath})
+		}
+
+		term := ""
+		if isDir(f) {
+			term = SEP
+		}
+		fmt.Fprintf(w, "%v%v\n", fullpath, term)
+	}
 
 	if printer.Recursive {
-		for _, f := range files {
-			if isDir(f) {
-				printer.Print(f, strings.Join([]string{absPath, f.Name}, "/"))
-			}
+		fmt.Fprintf(w, "\n")
+		for _, d := range directories {
+			printer.Print(d.f, d.fullpath)
 		}
 	}
 

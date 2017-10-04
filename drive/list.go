@@ -2,11 +2,12 @@ package drive
 
 import (
 	"fmt"
+	"io"
+	"text/tabwriter"
+
 	"golang.org/x/net/context"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
-	"io"
-	"text/tabwriter"
 )
 
 type ListFilesArgs struct {
@@ -72,9 +73,16 @@ func (self *Drive) listAllFiles(args listAllFilesArgs) ([]*drive.File, error) {
 		pageSize = 1000
 	}
 
+	var fields []googleapi.Field
+	if args.fields != nil {
+		fields = args.fields
+	} else {
+		fields = []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents)"}
+	}
+
 	controlledStop := fmt.Errorf("Controlled stop")
 
-	err := self.service.Files.List().Q(args.query).Fields(args.fields...).OrderBy(args.sortOrder).PageSize(pageSize).Pages(context.TODO(), func(fl *drive.FileList) error {
+	err := self.service.Files.List().Q(args.query).Fields(fields...).OrderBy(args.sortOrder).PageSize(pageSize).Pages(context.TODO(), func(fl *drive.FileList) error {
 		files = append(files, fl.Files...)
 
 		// Stop when we have all the files we need
