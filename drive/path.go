@@ -20,19 +20,19 @@ func init() {
 	defaultQueryFields = []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents)"}
 }
 
-func (self *Drive) newPathfinder() *remotePathfinder {
-	return &remotePathfinder{
+func (self *Drive) newPathFinder() *remotePathFinder {
+	return &remotePathFinder{
 		service: self.service.Files,
 		files:   make(map[string]*drive.File),
 	}
 }
 
-type remotePathfinder struct {
+type remotePathFinder struct {
 	service *drive.FilesService
 	files   map[string]*drive.File
 }
 
-func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
+func (self *remotePathFinder) absPath(f *drive.File) (string, error) {
 	name := f.Name
 
 	if len(f.Parents) == 0 {
@@ -60,7 +60,7 @@ func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
 	return filepath.Join(path...), nil
 }
 
-func (self *remotePathfinder) getAbsPath(f *drive.File) (string, error) {
+func (self *remotePathFinder) getAbsPath(f *drive.File) (string, error) {
 
 	if len(f.Parents) == 0 {
 		return RemotePathSep, nil
@@ -74,7 +74,7 @@ func (self *remotePathfinder) getAbsPath(f *drive.File) (string, error) {
 	return RemotePathSep + strings.Join(items, RemotePathSep), nil
 }
 
-func (self *remotePathfinder) JoinPath(pathes ...string) string {
+func (self *remotePathFinder) JoinPath(pathes ...string) string {
 	items := []string{}
 	for _, path := range pathes {
 		path = strings.TrimSuffix(path, RemotePathSep)
@@ -83,7 +83,7 @@ func (self *remotePathfinder) JoinPath(pathes ...string) string {
 	return strings.Join(items, RemotePathSep)
 }
 
-func (self *remotePathfinder) getFile(id string) (*drive.File, error) {
+func (self *remotePathFinder) getFile(id string) (*drive.File, error) {
 	// Check cache
 	if f, ok := self.files[id]; ok {
 		return f, nil
@@ -101,17 +101,7 @@ func (self *remotePathfinder) getFile(id string) (*drive.File, error) {
 	return f, nil
 }
 
-type driveIdResolver struct {
-	service *drive.FilesService
-}
-
-func (drive *Drive) newIdResolver() *driveIdResolver {
-	return &driveIdResolver{
-		service: drive.service.Files,
-	}
-}
-
-func (self *driveIdResolver) getFileId(abspath string) (string, error) {
+func (self *remotePathFinder) getFileId(abspath string) (string, error) {
 	if !strings.HasPrefix(abspath, "/") {
 		return "", fmt.Errorf("'%s' is not absolute path", abspath)
 	}
@@ -132,7 +122,7 @@ func (self *driveIdResolver) getFileId(abspath string) (string, error) {
 	return parent, nil
 }
 
-func (self *driveIdResolver) secureFileId(expr string) string {
+func (self *remotePathFinder) secureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
 		id, err := self.getFileId(expr)
 		if err == nil {
@@ -142,7 +132,7 @@ func (self *driveIdResolver) secureFileId(expr string) string {
 	return expr
 }
 
-func (self *driveIdResolver) queryEntryByName(name string, parent string) *drive.File {
+func (self *remotePathFinder) queryEntryByName(name string, parent string) *drive.File {
 	conditions := []string{
 		"trashed = false",
 		fmt.Sprintf("name = '%v'", name),

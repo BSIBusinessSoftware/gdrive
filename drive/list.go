@@ -33,12 +33,12 @@ func (self *Drive) List(args ListFilesArgs) (err error) {
 		return fmt.Errorf("Failed to list files: %s", err)
 	}
 
-	pathfinder := self.newPathfinder()
+	finder := self.newPathFinder()
 
 	if args.AbsPath {
 		// Replace name with absolute path
 		for _, f := range files {
-			f.Name, err = pathfinder.absPath(f)
+			f.Name, err = finder.absPath(f)
 			if err != nil {
 				return err
 			}

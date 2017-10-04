@@ -12,8 +12,8 @@ type DeleteArgs struct {
 }
 
 func (args *DeleteArgs) normalize(drive *Drive) {
-	resolver := drive.newIdResolver()
-	args.Id = resolver.secureFileId(args.Id)
+	finder := drive.newPathFinder()
+	args.Id = finder.secureFileId(args.Id)
 }
 
 func (self *Drive) Delete(args DeleteArgs) error {

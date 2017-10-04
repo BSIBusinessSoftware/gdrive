@@ -16,14 +16,14 @@ type ListDirectoryArgs struct {
 }
 
 func (args *ListDirectoryArgs) normalize(drive *Drive) {
-	resolver := drive.newIdResolver()
-	args.Id = resolver.secureFileId(args.Id)
+	finder := drive.newPathFinder()
+	args.Id = finder.secureFileId(args.Id)
 }
 
 func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 	args.normalize(self)
 
-	f, err := self.newPathfinder().getFile(args.Id)
+	f, err := self.newPathFinder().getFile(args.Id)
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)
 	}
@@ -37,7 +37,7 @@ func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 type DirectoryPrinter struct {
 	Out        io.Writer
 	Drive      *Drive
-	PathFinder *remotePathfinder
+	PathFinder *remotePathFinder
 	Recursive  bool
 }
 
@@ -45,7 +45,7 @@ func NewDirectoryPrinter(drive *Drive, args ListDirectoryArgs) *DirectoryPrinter
 	return &DirectoryPrinter{
 		Out:        args.Out,
 		Drive:      drive,
-		PathFinder: drive.newPathfinder(),
+		PathFinder: drive.newPathFinder(),
 		Recursive:  args.Recursive,
 	}
 }

@@ -29,9 +29,9 @@ type UploadArgs struct {
 
 func (args *UploadArgs) normalize(drive *Drive) {
 	var ids []string
-	resolver := drive.newIdResolver()
+	finder := drive.newPathFinder()
 	for _, parent := range args.Parents {
-		id := resolver.secureFileId(parent)
+		id := finder.secureFileId(parent)
 		ids = append(ids, id)
 	}
 
@@ -227,9 +227,9 @@ type UploadStreamArgs struct {
 
 func (args *UploadStreamArgs) normalize(drive *Drive) {
 	var ids []string
-	resolver := drive.newIdResolver()
+	finder := drive.newPathFinder()
 	for _, parent := range args.Parents {
-		id := resolver.secureFileId(parent)
+		id := finder.secureFileId(parent)
 		ids = append(ids, id)
 	}
 

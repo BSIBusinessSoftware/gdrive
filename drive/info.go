@@ -14,8 +14,8 @@ type FileInfoArgs struct {
 }
 
 func (args *FileInfoArgs) normalize(drive *Drive) {
-	resolver := drive.newIdResolver()
-	args.Id = resolver.secureFileId(args.Id)
+	finder := drive.newPathFinder()
+	args.Id = finder.secureFileId(args.Id)
 }
 
 func (self *Drive) Info(args FileInfoArgs) error {
@@ -26,8 +26,8 @@ func (self *Drive) Info(args FileInfoArgs) error {
 		return fmt.Errorf("Failed to get file: %s", err)
 	}
 
-	pathfinder := self.newPathfinder()
-	absPath, err := pathfinder.absPath(f)
+	finder := self.newPathFinder()
+	absPath, err := finder.absPath(f)
 	if err != nil {
 		return err
 	}
