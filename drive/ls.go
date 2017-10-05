@@ -54,7 +54,7 @@ func (printer *DirectoryPrinter) Print(id string) error {
 	if isDir(f) {
 		printer.printDirectory(f, "")
 	} else {
-
+		printer.printEntry(f, "")
 	}
 	return nil
 }
@@ -106,11 +106,20 @@ func (printer *DirectoryPrinter) printDirectory(file *drive.File, fullPath strin
 	return nil
 }
 
-func (printer *DirectoryPrinter) printEntry(f *drive.File, fullPath string) {
+func (printer *DirectoryPrinter) printEntry(file *drive.File, fullPath string) error {
+
+	if len(fullPath) == 0 {
+		name, err := printer.PathFinder.getAbsPath(file)
+		if err != nil {
+			return err
+		}
+		fullPath = name
+	}
 
 	term := ""
-	if isDir(f) {
+	if isDir(file) {
 		term = RemotePathSep
 	}
 	fmt.Fprintf(printer.Out, "%v%v\n", fullPath, term)
+	return nil
 }
