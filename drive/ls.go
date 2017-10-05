@@ -6,7 +6,7 @@ import (
 	"math"
 	"text/tabwriter"
 
-	drive "google.golang.org/api/drive/v3"
+	"google.golang.org/api/drive/v3"
 )
 
 type ListDirectoryArgs struct {
@@ -21,12 +21,13 @@ func (args *ListDirectoryArgs) normalize(drive *Drive) {
 	args.Id = finder.secureFileId(args.Id)
 }
 
+//noinspection GoReceiverNames
 func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 	args.normalize(self)
 
 	f, err := self.newPathFinder().getFile(args.Id)
 	if err != nil {
-		return fmt.Errorf("Failed to get file: %s", err)
+		return fmt.Errorf("failed to get file: %s", err)
 	}
 	if isDir(f) {
 		printer := NewDirectoryPrinter(self, &args)
@@ -71,12 +72,12 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 
 	files, err := printer.Drive.listAllFiles(listArgs)
 	if err != nil {
-		return fmt.Errorf("Failed to list files: %s", err)
+		return fmt.Errorf("failed to list files: %s", err)
 	}
 
 	type directory struct {
 		f        *drive.File
-		fullpath string
+		fullPath string
 	}
 	var directories []directory
 
@@ -85,22 +86,22 @@ func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
 			continue
 		}
 
-		fullpath := printer.PathFinder.JoinPath(absPath, f.Name)
+		fullPath := printer.PathFinder.JoinPath(absPath, f.Name)
 		if isDir(f) {
-			directories = append(directories, directory{f, fullpath})
+			directories = append(directories, directory{f, fullPath})
 		}
 
 		term := ""
 		if isDir(f) {
 			term = RemotePathSep
 		}
-		fmt.Fprintf(w, "%v%v\n", fullpath, term)
+		fmt.Fprintf(w, "%v%v\n", fullPath, term)
 	}
 
 	if printer.Args.Recursive {
-		fmt.Fprintf(w, "\n")
+		fmt.Fprint(w, "\n")
 		for _, d := range directories {
-			printer.Print(d.f, d.fullpath)
+			printer.Print(d.f, d.fullPath)
 		}
 	}
 
