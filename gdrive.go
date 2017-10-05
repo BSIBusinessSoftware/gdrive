@@ -8,6 +8,7 @@ import (
 )
 
 const Name = "gdrive"
+
 var Version = "0.0.0" // placeholder
 
 const DefaultMaxFiles = 30
@@ -109,7 +110,7 @@ func main() {
 					cli.BoolFlag{
 						Name:        "recursive",
 						Patterns:    []string{"-r", "--recursive"},
-						Description: "List directory contents",
+						Description: "List directory contents recursively",
 						OmitValue:   true,
 					},
 					cli.BoolFlag{
