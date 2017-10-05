@@ -3,8 +3,6 @@ package drive
 import (
 	"fmt"
 	"io"
-	"math"
-	"text/tabwriter"
 
 	"google.golang.org/api/drive/v3"
 )
@@ -25,85 +23,94 @@ func (args *ListDirectoryArgs) normalize(drive *Drive) {
 func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 	args.normalize(self)
 
-	f, err := self.newPathFinder().getFile(args.Id)
-	if err != nil {
-		return fmt.Errorf("failed to get file: %s", err)
-	}
-	if isDir(f) {
-		printer := NewDirectoryPrinter(self, &args)
-		printer.Print(f, "")
-	}
+	printer := NewDirectoryPrinter(self, &args)
+	printer.Print(args.Id)
 	return
 }
 
 type DirectoryPrinter struct {
 	Drive      *Drive
 	PathFinder *remotePathFinder
-	Args       *ListDirectoryArgs
+	Out        io.Writer
+	Recursive  bool
+	ShowDoc    bool
 }
 
 func NewDirectoryPrinter(drive *Drive, args *ListDirectoryArgs) *DirectoryPrinter {
 	return &DirectoryPrinter{
 		Drive:      drive,
 		PathFinder: drive.newPathFinder(),
-		Args:       args,
+		Out:        args.Out,
+		Recursive:  args.Recursive,
+		ShowDoc:    args.ShowDoc,
 	}
 }
 
-func (printer *DirectoryPrinter) Print(file *drive.File, absPath string) error {
-	w := new(tabwriter.Writer)
-	w.Init(printer.Args.Out, 0, 0, 3, ' ', 0)
+func (printer *DirectoryPrinter) Print(id string) error {
+	f, err := printer.PathFinder.getFile(id)
+	if err != nil {
+		return err
+	}
+	if isDir(f) {
+		printer.printDirectory(f, "")
+	} else {
 
-	if len(absPath) == 0 {
+	}
+	return nil
+}
+
+func (printer *DirectoryPrinter) printDirectory(file *drive.File, fullPath string) error {
+
+	if len(fullPath) == 0 {
 		name, err := printer.PathFinder.getAbsPath(file)
 		if err != nil {
 			return err
 		}
-		absPath = name
+		fullPath = name
 	}
-	fmt.Fprintf(w, "+ %v:\n", absPath)
+	fmt.Fprintf(printer.Out, "+ %v:\n", fullPath)
 
-	listArgs := listAllFilesArgs{
+	files, err := printer.Drive.listAllFiles(listAllFilesArgs{
 		query:     fmt.Sprintf("trashed = false and 'me' in owners and '%v' in parents", file.Id),
-		fields:    nil,
 		sortOrder: "folder, name",
-		maxFiles:  math.MaxInt64,
-	}
-
-	files, err := printer.Drive.listAllFiles(listArgs)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to list files: %s", err)
 	}
 
 	type directory struct {
-		f        *drive.File
+		file     *drive.File
 		fullPath string
 	}
-	var directories []directory
 
+	var directories []directory
 	for _, f := range files {
-		if isDoc(f) && !printer.Args.ShowDoc {
+		if isDoc(f) && !printer.ShowDoc {
 			continue
 		}
 
-		fullPath := printer.PathFinder.JoinPath(absPath, f.Name)
+		fullPath := printer.PathFinder.JoinPath(fullPath, f.Name)
 		if isDir(f) {
 			directories = append(directories, directory{f, fullPath})
 		}
-
-		term := ""
-		if isDir(f) {
-			term = RemotePathSep
-		}
-		fmt.Fprintf(w, "%v%v\n", fullPath, term)
+		printer.printEntry(f, fullPath)
 	}
 
-	if printer.Args.Recursive {
-		fmt.Fprint(w, "\n")
+	if printer.Recursive {
+		fmt.Fprint(printer.Out, "\n")
 		for _, d := range directories {
-			printer.Print(d.f, d.fullPath)
+			printer.printDirectory(d.file, d.fullPath)
 		}
 	}
 
 	return nil
+}
+
+func (printer *DirectoryPrinter) printEntry(f *drive.File, fullPath string) {
+
+	term := ""
+	if isDir(f) {
+		term = RemotePathSep
+	}
+	fmt.Fprintf(printer.Out, "%v%v\n", fullPath, term)
 }
