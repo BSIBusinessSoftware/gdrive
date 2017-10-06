@@ -89,7 +89,7 @@ func (printer *DirectoryPrinter) printDirectory(file *drive.File, fullPath strin
 			continue
 		}
 
-		fullPath := printer.PathFinder.JoinPath(fullPath, f.Name)
+		fullPath := printer.PathFinder.joinPath(fullPath, f.Name)
 		if isDir(f) {
 			directories = append(directories, directory{f, fullPath})
 		}

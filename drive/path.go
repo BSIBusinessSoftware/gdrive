@@ -74,7 +74,7 @@ func (self *remotePathFinder) getAbsPath(f *drive.File) (string, error) {
 	return RemotePathSep + strings.Join(items, RemotePathSep), nil
 }
 
-func (self *remotePathFinder) JoinPath(pathes ...string) string {
+func (self *remotePathFinder) joinPath(pathes ...string) string {
 	items := []string{}
 	for _, path := range pathes {
 		path = strings.TrimSuffix(path, RemotePathSep)
