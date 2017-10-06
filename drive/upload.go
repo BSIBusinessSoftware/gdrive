@@ -31,7 +31,7 @@ func (args *UploadArgs) normalize(drive *Drive) {
 	var ids []string
 	finder := drive.newPathFinder()
 	for _, parent := range args.Parents {
-		id := finder.secureFileId(parent)
+		id := finder.SecureFileId(parent)
 		ids = append(ids, id)
 	}
 
@@ -229,7 +229,7 @@ func (args *UploadStreamArgs) normalize(drive *Drive) {
 	var ids []string
 	finder := drive.newPathFinder()
 	for _, parent := range args.Parents {
-		id := finder.secureFileId(parent)
+		id := finder.SecureFileId(parent)
 		ids = append(ids, id)
 	}
 

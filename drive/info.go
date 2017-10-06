@@ -15,7 +15,7 @@ type FileInfoArgs struct {
 
 func (args *FileInfoArgs) normalize(drive *Drive) {
 	finder := drive.newPathFinder()
-	args.Id = finder.secureFileId(args.Id)
+	args.Id = finder.SecureFileId(args.Id)
 }
 
 func (self *Drive) Info(args FileInfoArgs) error {
@@ -27,7 +27,7 @@ func (self *Drive) Info(args FileInfoArgs) error {
 	}
 
 	finder := self.newPathFinder()
-	absPath, err := finder.absPath(f)
+	absPath, err := finder.GetAbsPath(f)
 	if err != nil {
 		return err
 	}

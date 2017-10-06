@@ -16,7 +16,7 @@ type ListDirectoryArgs struct {
 
 func (args *ListDirectoryArgs) normalize(drive *Drive) {
 	finder := drive.newPathFinder()
-	args.Id = finder.secureFileId(args.Id)
+	args.Id = finder.SecureFileId(args.Id)
 }
 
 //noinspection GoReceiverNames
@@ -24,7 +24,7 @@ func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 	args.normalize(self)
 
 	printer := NewDirectoryPrinter(self, &args)
-	printer.Print(args.Id)
+	printer.Print(fileId(args.Id))
 	return
 }
 
@@ -46,8 +46,8 @@ func NewDirectoryPrinter(drive *Drive, args *ListDirectoryArgs) *DirectoryPrinte
 	}
 }
 
-func (printer *DirectoryPrinter) Print(id string) error {
-	f, err := printer.PathFinder.getFile(id)
+func (printer *DirectoryPrinter) Print(id fileId) error {
+	f, err := printer.PathFinder.GetFile(id)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (printer *DirectoryPrinter) Print(id string) error {
 func (printer *DirectoryPrinter) printDirectory(file *drive.File, fullPath string) error {
 
 	if len(fullPath) == 0 {
-		name, err := printer.PathFinder.getAbsPath(file)
+		name, err := printer.PathFinder.GetAbsPath(file)
 		if err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func (printer *DirectoryPrinter) printDirectory(file *drive.File, fullPath strin
 			continue
 		}
 
-		fullPath := printer.PathFinder.joinPath(fullPath, f.Name)
+		fullPath := printer.PathFinder.JoinPath(fullPath, f.Name)
 		if isDir(f) {
 			directories = append(directories, directory{f, fullPath})
 		}
@@ -109,7 +109,7 @@ func (printer *DirectoryPrinter) printDirectory(file *drive.File, fullPath strin
 func (printer *DirectoryPrinter) printEntry(file *drive.File, fullPath string) error {
 
 	if len(fullPath) == 0 {
-		name, err := printer.PathFinder.getAbsPath(file)
+		name, err := printer.PathFinder.GetAbsPath(file)
 		if err != nil {
 			return err
 		}

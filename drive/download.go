@@ -26,7 +26,7 @@ type DownloadArgs struct {
 
 func (args *DownloadArgs) normalize(drive *Drive) {
 	finder := drive.newPathFinder()
-	args.Id = finder.secureFileId(args.Id)
+	args.Id = finder.SecureFileId(args.Id)
 }
 
 func (self *Drive) Download(args DownloadArgs) error {

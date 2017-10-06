@@ -13,7 +13,7 @@ type DeleteArgs struct {
 
 func (args *DeleteArgs) normalize(drive *Drive) {
 	finder := drive.newPathFinder()
-	args.Id = finder.secureFileId(args.Id)
+	args.Id = finder.SecureFileId(args.Id)
 }
 
 func (self *Drive) Delete(args DeleteArgs) error {

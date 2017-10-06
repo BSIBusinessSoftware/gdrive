@@ -2,7 +2,6 @@ package drive
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -23,26 +22,44 @@ func init() {
 func (self *Drive) newPathFinder() *remotePathFinder {
 	return &remotePathFinder{
 		service: self.service.Files,
-		cache:   make(map[string]*drive.File),
+		caches:  make(map[fileId]*fileEntry),
 	}
+}
+
+type fileId string
+
+type fileEntry struct {
+	file    *drive.File
+	absPath string
 }
 
 type remotePathFinder struct {
 	service *drive.FilesService
-	cache   map[string]*drive.File
+	caches  map[fileId]*fileEntry // id -> entry
 }
 
-func (self *remotePathFinder) absPath(f *drive.File) (string, error) {
-	name := f.Name
+func (self *remotePathFinder) GetAbsPath(f *drive.File) (string, error) {
 
 	if len(f.Parents) == 0 {
-		return name, nil
+		return RemotePathSep, nil
+	}
+	id := fileId(f.Id)
+	if cache, ok := self.caches[id]; ok {
+		if len(cache.absPath) > 0 {
+			fmt.Printf("hit %v\n", cache.absPath)
+			return cache.absPath, nil
+		}
+	} else {
+		self.caches[id] = &fileEntry{
+			file:    f,
+			absPath: "",
+		}
 	}
 
 	var path []string
 
 	for {
-		parent, err := self.getFile(f.Parents[0])
+		parent, err := self.GetFile(fileId(f.Parents[0]))
 		if err != nil {
 			return "", err
 		}
@@ -52,29 +69,20 @@ func (self *remotePathFinder) absPath(f *drive.File) (string, error) {
 			break
 		}
 
-		path = append([]string{parent.Name}, path...)
+		// Insert parent name at beginning
+		path = append([]string{f.Name}, path...)
 		f = parent
 	}
 
-	path = append(path, name)
-	return filepath.Join(path...), nil
+	absPath := RemotePathSep + strings.Join(append(path, f.Name), RemotePathSep)
+
+	// Save in cache
+	self.caches[id].absPath = absPath
+
+	return absPath, nil
 }
 
-func (self *remotePathFinder) getAbsPath(f *drive.File) (string, error) {
-
-	if len(f.Parents) == 0 {
-		return RemotePathSep, nil
-	}
-
-	path, err := self.absPath(f)
-	if err != nil {
-		return "", err
-	}
-	items := strings.Split(path, string(filepath.Separator))
-	return RemotePathSep + strings.Join(items, RemotePathSep), nil
-}
-
-func (self *remotePathFinder) joinPath(pathes ...string) string {
+func (self *remotePathFinder) JoinPath(pathes ...string) string {
 	items := []string{}
 	for _, path := range pathes {
 		path = strings.TrimSuffix(path, RemotePathSep)
@@ -83,56 +91,89 @@ func (self *remotePathFinder) joinPath(pathes ...string) string {
 	return strings.Join(items, RemotePathSep)
 }
 
-func (self *remotePathFinder) getFile(id string) (*drive.File, error) {
+func (self *remotePathFinder) GetFile(id fileId) (*drive.File, error) {
 	// Check cache
-	if f, ok := self.cache[id]; ok {
-		return f, nil
+	if entry, ok := self.caches[id]; ok {
+		fmt.Printf("hit %v\n", entry.file.Id)
+		return entry.file, nil
 	}
 
 	// Fetch file from drive
-	f, err := self.service.Get(id).Fields(defaultGetFields...).Do()
+	f, err := self.service.Get(string(id)).Fields(defaultGetFields...).Do()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get file: %s", err)
 	}
 
 	// Save in cache
-	self.cache[f.Id] = f
+	self.caches[id] = &fileEntry{
+		file:    f,
+		absPath: "",
+	}
 
 	return f, nil
 }
 
-func (self *remotePathFinder) getFileId(abspath string) (string, error) {
-	if !strings.HasPrefix(abspath, "/") {
-		return "", fmt.Errorf("'%s' is not absolute path", abspath)
+func (self *remotePathFinder) GetFileId(absPath string) (fileId, error) {
+	if !strings.HasPrefix(absPath, "/") {
+		return "", fmt.Errorf("'%s' is not absolute path", absPath)
 	}
 
-	abspath = strings.Trim(abspath, "/")
-	if abspath == "" {
+	absPath = strings.TrimRight(absPath, "/")
+	if absPath == "" {
 		return "root", nil
 	}
-	pathes := strings.Split(abspath, "/")
-	var parent = "root"
-	for _, path := range pathes {
-		entry := self.queryEntryByName(path, parent)
-		if entry == nil {
-			return "", fmt.Errorf("path not found: '%v'", abspath)
+
+	// Check cache
+	for _, entry := range self.caches {
+		if entry.absPath == absPath {
+			fmt.Printf("hit %v\n", entry.file.Id)
+			return fileId(entry.file.Id), nil
 		}
-		parent = entry.Id
+	}
+
+	pathes := strings.Split(absPath[1:], "/")
+	var parent fileId = "root"
+	var f *drive.File
+	for _, path := range pathes {
+		entry := self.queryEntryByName(path, fileId(parent))
+		if entry == nil {
+			return "", fmt.Errorf("path not found: '%v'", absPath)
+		}
+		f = entry
+		parent = fileId(f.Id)
+	}
+
+	// Save in Cache
+	self.caches[fileId(f.Id)] = &fileEntry{
+		file:    f,
+		absPath: absPath,
 	}
 	return parent, nil
 }
 
-func (self *remotePathFinder) secureFileId(expr string) string {
+func (self *remotePathFinder) SecureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
-		id, err := self.getFileId(expr)
+		id, err := self.GetFileId(expr)
 		if err == nil {
-			return id
+			return string(id)
 		}
 	}
 	return expr
 }
 
-func (self *remotePathFinder) queryEntryByName(name string, parent string) *drive.File {
+func (self *remotePathFinder) queryEntryByName(name string, parent fileId) *drive.File {
+
+	// Check cache
+	{
+		id := string(parent)
+		for _, entry := range self.caches {
+			if entry.file.Name == name && entry.file.Parents[0] == id {
+				fmt.Printf("hit %v\n", name)
+				return entry.file
+			}
+		}
+	}
+
 	conditions := []string{
 		"trashed = false",
 		fmt.Sprintf("name = '%v'", name),
@@ -152,7 +193,10 @@ func (self *remotePathFinder) queryEntryByName(name string, parent string) *driv
 
 	// Save in cache
 	for _, f := range files {
-		self.cache[f.Id] = f
+		self.caches[fileId(f.Id)] = &fileEntry{
+			file:    f,
+			absPath: "",
+		}
 	}
 
 	return files[0]

@@ -38,7 +38,7 @@ func (self *Drive) List(args ListFilesArgs) (err error) {
 	if args.AbsPath {
 		// Replace name with absolute path
 		for _, f := range files {
-			f.Name, err = finder.absPath(f)
+			f.Name, err = finder.GetAbsPath(f)
 			if err != nil {
 				return err
 			}
