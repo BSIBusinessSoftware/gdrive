@@ -23,13 +23,13 @@ func init() {
 func (self *Drive) newPathFinder() *remotePathFinder {
 	return &remotePathFinder{
 		service: self.service.Files,
-		files:   make(map[string]*drive.File),
+		cache:   make(map[string]*drive.File),
 	}
 }
 
 type remotePathFinder struct {
 	service *drive.FilesService
-	files   map[string]*drive.File
+	cache   map[string]*drive.File
 }
 
 func (self *remotePathFinder) absPath(f *drive.File) (string, error) {
@@ -85,7 +85,7 @@ func (self *remotePathFinder) JoinPath(pathes ...string) string {
 
 func (self *remotePathFinder) getFile(id string) (*drive.File, error) {
 	// Check cache
-	if f, ok := self.files[id]; ok {
+	if f, ok := self.cache[id]; ok {
 		return f, nil
 	}
 
@@ -96,7 +96,7 @@ func (self *remotePathFinder) getFile(id string) (*drive.File, error) {
 	}
 
 	// Save in cache
-	self.files[f.Id] = f
+	self.cache[f.Id] = f
 
 	return f, nil
 }
@@ -148,6 +148,11 @@ func (self *remotePathFinder) queryEntryByName(name string, parent string) *driv
 
 	if len(files) == 0 {
 		return nil
+	}
+
+	// Save in cache
+	for _, f := range files {
+		self.cache[f.Id] = f
 	}
 
 	return files[0]
