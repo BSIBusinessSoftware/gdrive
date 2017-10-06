@@ -19,12 +19,11 @@ func (args *ListDirectoryArgs) normalize(drive *Drive) {
 	args.Id = finder.SecureFileId(args.Id)
 }
 
-//noinspection GoReceiverNames
 func (self *Drive) ListDirectory(args ListDirectoryArgs) (err error) {
 	args.normalize(self)
 
 	printer := NewDirectoryPrinter(self, &args)
-	printer.Print(fileId(args.Id))
+	printer.Print(args.Id)
 	return
 }
 
@@ -46,7 +45,7 @@ func NewDirectoryPrinter(drive *Drive, args *ListDirectoryArgs) *DirectoryPrinte
 	}
 }
 
-func (printer *DirectoryPrinter) Print(id fileId) error {
+func (printer *DirectoryPrinter) Print(id string) error {
 	f, err := printer.PathFinder.GetFile(id)
 	if err != nil {
 		return err
