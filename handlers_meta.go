@@ -11,6 +11,7 @@ import (
 
 func printVersion(ctx cli.Context) {
 	fmt.Printf("%s: %s\n", Name, Version)
+	fmt.Printf("Build Date: %s\n", BuildDate)
 	fmt.Printf("Golang: %s\n", runtime.Version())
 	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 }
