@@ -2,8 +2,9 @@ package drive
 
 import (
 	"fmt"
-	"google.golang.org/api/drive/v3"
 	"io"
+
+	"google.golang.org/api/drive/v3"
 )
 
 const DirectoryMimeType = "application/vnd.google-apps.folder"
@@ -15,7 +16,21 @@ type MkdirArgs struct {
 	Parents     []string
 }
 
+func (args *MkdirArgs) normalize(drive *Drive) {
+	if len(args.Parents) > 0 {
+		var ids []string
+		finder := drive.newPathFinder()
+		for _, parent := range args.Parents {
+			id := finder.SecureFileId(parent)
+			ids = append(ids, id)
+		}
+		args.Parents = ids
+	}
+}
+
 func (self *Drive) Mkdir(args MkdirArgs) error {
+	args.normalize(self)
+
 	f, err := self.mkdir(args)
 	if err != nil {
 		return err
