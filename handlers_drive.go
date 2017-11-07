@@ -33,6 +33,16 @@ func listHandler(ctx cli.Context) {
 	})
 	checkErr(err)
 }
+func lsHandler(ctx cli.Context) {
+	args := ctx.Args()
+	err := newDrive(args).ListDirectory(drive.ListDirectoryArgs{
+		Out:       os.Stdout,
+		Id:        args.String("fileId"),
+		Recursive: args.Bool("recursive"),
+		ShowDoc:   args.Bool("doc"),
+	})
+	checkErr(err)
+}
 
 func listChangesHandler(ctx cli.Context) {
 	args := ctx.Args()
@@ -51,16 +61,16 @@ func downloadHandler(ctx cli.Context) {
 	args := ctx.Args()
 	checkDownloadArgs(args)
 	err := newDrive(args).Download(drive.DownloadArgs{
-		Out:        os.Stdout,
-		Identifier: args.String("fileId"),
-		Force:      args.Bool("force"),
-		Skip:       args.Bool("skip"),
-		Path:       args.String("path"),
-		Delete:     args.Bool("delete"),
-		Recursive:  args.Bool("recursive"),
-		Stdout:     args.Bool("stdout"),
-		Progress:   progressWriter(args.Bool("noProgress")),
-		Timeout:    durationInSeconds(args.Int64("timeout")),
+		Out:       os.Stdout,
+		Id:        args.String("fileId"),
+		Force:     args.Bool("force"),
+		Skip:      args.Bool("skip"),
+		Path:      args.String("path"),
+		Delete:    args.Bool("delete"),
+		Recursive: args.Bool("recursive"),
+		Stdout:    args.Bool("stdout"),
+		Progress:  progressWriter(args.Bool("noProgress")),
+		Timeout:   durationInSeconds(args.Int64("timeout")),
 	})
 	checkErr(err)
 }

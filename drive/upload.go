@@ -2,13 +2,14 @@ package drive
 
 import (
 	"fmt"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 	"io"
 	"mime"
 	"os"
 	"path/filepath"
 	"time"
+
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 )
 
 type UploadArgs struct {
@@ -26,7 +27,20 @@ type UploadArgs struct {
 	Timeout     time.Duration
 }
 
+func (args *UploadArgs) normalize(drive *Drive) {
+	var ids []string
+	finder := drive.newPathFinder()
+	for _, parent := range args.Parents {
+		id := finder.SecureFileId(parent)
+		ids = append(ids, id)
+	}
+
+	args.Parents = ids
+}
+
 func (self *Drive) Upload(args UploadArgs) error {
+	args.normalize(self)
+
 	if args.ChunkSize > intMax()-1 {
 		return fmt.Errorf("Chunk size is to big, max chunk size for this computer is %d", intMax()-1)
 	}
@@ -211,7 +225,20 @@ type UploadStreamArgs struct {
 	Timeout     time.Duration
 }
 
+func (args *UploadStreamArgs) normalize(drive *Drive) {
+	var ids []string
+	finder := drive.newPathFinder()
+	for _, parent := range args.Parents {
+		id := finder.SecureFileId(parent)
+		ids = append(ids, id)
+	}
+
+	args.Parents = ids
+}
+
 func (self *Drive) UploadStream(args UploadStreamArgs) error {
+	args.normalize(self)
+
 	if args.ChunkSize > intMax()-1 {
 		return fmt.Errorf("Chunk size is to big, max chunk size for this computer is %d", intMax()-1)
 	}

@@ -8,7 +8,9 @@ import (
 )
 
 const Name = "gdrive"
-const Version = "2.1.2"
+
+var Version = "0.0.0" // placeholder
+var BuildDate = "" // placeholder
 
 const DefaultMaxFiles = 30
 const DefaultMaxChanges = 100
@@ -94,6 +96,28 @@ func main() {
 						Name:        "sizeInBytes",
 						Patterns:    []string{"--bytes"},
 						Description: "Size in bytes",
+						OmitValue:   true,
+					},
+				),
+			},
+		},
+		&cli.Handler{
+			Pattern:     "[global] ls [options] <fileId>",
+			Description: "List files",
+			Callback:    lsHandler,
+			FlagGroups: cli.FlagGroups{
+				cli.NewFlagGroup("global", globalFlags...),
+				cli.NewFlagGroup("options",
+					cli.BoolFlag{
+						Name:        "recursive",
+						Patterns:    []string{"-r", "--recursive"},
+						Description: "List directory contents recursively",
+						OmitValue:   true,
+					},
+					cli.BoolFlag{
+						Name:        "doc",
+						Patterns:    []string{"-d", "--document"},
+						Description: "List Google documents",
 						OmitValue:   true,
 					},
 				),

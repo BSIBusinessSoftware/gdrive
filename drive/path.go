@@ -2,7 +2,6 @@ package drive
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -10,29 +9,50 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-func (self *Drive) newPathfinder() *remotePathfinder {
-	return &remotePathfinder{
+const RemotePathSep = "/"
+
+var defaultGetFields []googleapi.Field
+var defaultQueryFields []googleapi.Field
+
+func init() {
+	defaultGetFields = []googleapi.Field{"id", "name", "md5Checksum", "mimeType", "size", "createdTime", "parents"}
+	defaultQueryFields = []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents)"}
+}
+
+func (self *Drive) newPathFinder() *remotePathFinder {
+	return &remotePathFinder{
 		service: self.service.Files,
-		files:   make(map[string]*drive.File),
+		caches:  make(map[string]*fileEntry),
 	}
 }
 
-type remotePathfinder struct {
-	service *drive.FilesService
-	files   map[string]*drive.File
+type fileEntry struct {
+	file    *drive.File
+	absPath string
 }
 
-func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
-	name := f.Name
+type remotePathFinder struct {
+	service *drive.FilesService
+	caches  map[string]*fileEntry // id -> entry
+}
+
+func (self *remotePathFinder) GetAbsPath(f *drive.File) (string, error) {
 
 	if len(f.Parents) == 0 {
-		return name, nil
+		return RemotePathSep, nil
+	}
+	if cache, ok := self.caches[f.Id]; ok {
+		if len(cache.absPath) > 0 {
+			return cache.absPath, nil
+		}
+	} else {
+		self.saveCache(f, "")
 	}
 
 	var path []string
 
 	for {
-		parent, err := self.getParent(f.Parents[0])
+		parent, err := self.GetFile(f.Parents[0])
 		if err != nil {
 			return "", err
 		}
@@ -42,95 +62,135 @@ func (self *remotePathfinder) absPath(f *drive.File) (string, error) {
 			break
 		}
 
-		path = append([]string{parent.Name}, path...)
+		// Insert parent name at beginning
+		path = append([]string{f.Name}, path...)
 		f = parent
 	}
 
-	path = append(path, name)
-	return filepath.Join(path...), nil
+	absPath := RemotePathSep + strings.Join(append(path, f.Name), RemotePathSep)
+
+	// Cache absPath
+	self.caches[f.Id].absPath = absPath
+
+	return absPath, nil
 }
 
-func (self *remotePathfinder) getParent(id string) (*drive.File, error) {
+func (self *remotePathFinder) JoinPath(pathes ...string) string {
+	items := []string{}
+	for _, path := range pathes {
+		path = strings.TrimSuffix(path, RemotePathSep)
+		items = append(items, path)
+	}
+	return strings.Join(items, RemotePathSep)
+}
+
+func (self *remotePathFinder) GetFile(id string) (*drive.File, error) {
 	// Check cache
-	if f, ok := self.files[id]; ok {
-		return f, nil
+	if entry, ok := self.caches[id]; ok {
+		return entry.file, nil
 	}
 
 	// Fetch file from drive
-	f, err := self.service.Get(id).Fields("id", "name", "parents").Do()
+	f, err := self.service.Get(string(id)).Fields(defaultGetFields...).Do()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get file: %s", err)
 	}
 
-	// Save in cache
-	self.files[f.Id] = f
+	self.saveCache(f, "")
 
 	return f, nil
 }
 
-type driveIDResolver struct {
-	service *drive.FilesService
-}
-
-func (drive *Drive) newIDResolver() *driveIDResolver {
-	return &driveIDResolver{
-		service: drive.service.Files,
-	}
-}
-
-func (self *driveIDResolver) getFileID(abspath string) (string, error) {
-	if !strings.HasPrefix(abspath, "/") {
-		return "", fmt.Errorf("'%s' is not absolute path", abspath)
+func (self *remotePathFinder) GetFileId(absPath string) (string, error) {
+	if !strings.HasPrefix(absPath, "/") {
+		return "", fmt.Errorf("'%s' is not absolute path", absPath)
 	}
 
-	abspath = strings.Trim(abspath, "/")
-	if abspath == "" {
+	absPath = strings.TrimRight(absPath, "/")
+	if absPath == "" {
 		return "root", nil
 	}
-	pathes := strings.Split(abspath, "/")
-	var parent = "root"
-	for _, path := range pathes {
-		entries, err := self.queryEntryByName(path, parent)
-		if err != nil {
-			return "", err
+
+	// Check cache
+	for _, entry := range self.caches {
+		if entry.absPath == absPath {
+			return entry.file.Id, nil
 		}
-		parent = entries[0].Id
 	}
+
+	pathes := strings.Split(absPath[1:], "/")
+	var parent string = "root"
+	var f *drive.File
+	for _, path := range pathes {
+		entry := self.queryEntryByName(path, parent)
+		if entry == nil {
+			return "", fmt.Errorf("path not found: '%v'", absPath)
+		}
+		f = entry
+		parent = f.Id
+	}
+
+	self.saveCache(f, absPath)
+
 	return parent, nil
 }
 
-func (self *driveIDResolver) secureFileId(expr string) string {
+func (self *remotePathFinder) SecureFileId(expr string) string {
 	if strings.Contains(expr, "/") {
-		id, err := self.getFileID(expr)
+		id, err := self.GetFileId(expr)
 		if err == nil {
-			return id
+			return string(id)
 		}
 	}
 	return expr
 }
 
-func (self *driveIDResolver) queryEntryByName(name string, parent string) ([]*drive.File, error) {
+func (self *remotePathFinder) queryEntryByName(name string, parentId string) *drive.File {
+
+	// Check cache
+	for _, entry := range self.caches {
+		if entry.file.Name == name && entry.file.Parents[0] == parentId {
+			return entry.file
+		}
+	}
+
 	conditions := []string{
 		"trashed = false",
 		fmt.Sprintf("name = '%v'", name),
-		fmt.Sprintf("'%v' in parents", parent),
+		fmt.Sprintf("'%v' in parents", parentId),
 	}
 	query := strings.Join(conditions, " and ")
-	fields := []googleapi.Field{"nextPageToken", "files(id,name,parents)"}
 
 	var files []*drive.File
-	self.service.List().Q(query).Fields(fields...).Pages(context.TODO(), func(fl *drive.FileList) error {
+	self.service.List().Q(query).Fields(defaultQueryFields...).Pages(context.TODO(), func(fl *drive.FileList) error {
 		files = append(files, fl.Files...)
 		return nil
 	})
 
 	if len(files) == 0 {
-		return nil, fmt.Errorf("name not found: '%v'", name)
+		return nil
 	}
 
-	if len(files) != 1 {
-		return nil, fmt.Errorf("ambiguous name: '%v'", name)
+	for _, f := range files {
+		self.saveCache(f, "")
 	}
 
-	return files, nil
+	return files[0]
+}
+
+func (self *remotePathFinder) saveCache(f *drive.File, absPath string) {
+	self.caches[f.Id] = &fileEntry{
+		file:    f,
+		absPath: absPath,
+	}
+}
+
+func isDoc(f *drive.File) bool {
+	if isDir(f) {
+		return false
+	}
+	if isBinary(f) {
+		return false
+	}
+	return true
 }
