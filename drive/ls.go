@@ -33,8 +33,8 @@ type DirectoryPrinter struct {
 	Out        io.Writer
 
 	// Options
-	Recursive  bool
-	ShowDoc    bool
+	Recursive bool
+	ShowDoc   bool
 }
 
 func NewDirectoryPrinter(drive *Drive, args *ListDirectoryArgs) *DirectoryPrinter {
