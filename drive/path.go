@@ -50,9 +50,9 @@ func (self *remotePathFinder) GetAbsPath(f *drive.File) (string, error) {
 	}
 
 	var path []string
-
+	current := f
 	for {
-		parent, err := self.GetFile(f.Parents[0])
+		parent, err := self.GetFile(current.Parents[0])
 		if err != nil {
 			return "", err
 		}
@@ -63,8 +63,8 @@ func (self *remotePathFinder) GetAbsPath(f *drive.File) (string, error) {
 		}
 
 		// Insert parent name at beginning
-		path = append([]string{f.Name}, path...)
-		f = parent
+		path = append([]string{parent.Name}, path...)
+		current = parent
 	}
 
 	absPath := RemotePathSep + strings.Join(append(path, f.Name), RemotePathSep)
