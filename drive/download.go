@@ -238,8 +238,9 @@ func (self *Drive) saveFile(args saveFileArgs) (int64, int64, error) {
 
 func (self *Drive) downloadDirectory(parent *drive.File, args DownloadArgs) error {
 	listArgs := listAllFilesArgs{
-		query:  fmt.Sprintf("'%s' in parents", parent.Id),
-		fields: []googleapi.Field{"nextPageToken", "files(id,name)"},
+		query:     fmt.Sprintf("'%s' in parents", parent.Id),
+		fields:    []googleapi.Field{"nextPageToken", "files(id,name)"},
+		sortOrder: "name",
 	}
 	files, err := self.listAllFiles(listArgs)
 	if err != nil {
