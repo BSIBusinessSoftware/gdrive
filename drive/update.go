@@ -2,12 +2,13 @@ package drive
 
 import (
 	"fmt"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 	"io"
 	"mime"
 	"path/filepath"
 	"time"
+
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 )
 
 type UpdateArgs struct {
@@ -24,7 +25,23 @@ type UpdateArgs struct {
 	Timeout     time.Duration
 }
 
+func (args *UpdateArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.Id = finder.SecureFileId(args.Id)
+	if len(args.Parents) > 0 {
+		var ids []string
+		finder := drive.newPathFinder()
+		for _, parent := range args.Parents {
+			id := finder.SecureFileId(parent)
+			ids = append(ids, id)
+		}
+		args.Parents = ids
+	}
+}
+
 func (self *Drive) Update(args UpdateArgs) error {
+	args.normalize(self)
+
 	srcFile, srcFileInfo, err := openFile(args.Path)
 	if err != nil {
 		return fmt.Errorf("Failed to open file: %s", err)

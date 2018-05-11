@@ -3,13 +3,14 @@ package drive
 import (
 	"bytes"
 	"fmt"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
+
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 )
 
 type DownloadSyncArgs struct {
@@ -24,7 +25,14 @@ type DownloadSyncArgs struct {
 	Comparer         FileComparer
 }
 
+func (args *DownloadSyncArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.RootId = finder.SecureFileId(args.RootId)
+}
+
 func (self *Drive) DownloadSync(args DownloadSyncArgs) error {
+	args.normalize(self)
+
 	fmt.Fprintln(args.Out, "Starting sync...")
 	started := time.Now()
 

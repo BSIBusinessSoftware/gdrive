@@ -18,7 +18,14 @@ type ShareArgs struct {
 	Discoverable bool
 }
 
+func (args *ShareArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.FileId = finder.SecureFileId(args.FileId)
+}
+
 func (self *Drive) Share(args ShareArgs) error {
+	args.normalize(self)
+
 	permission := &drive.Permission{
 		AllowFileDiscovery: args.Discoverable,
 		Role:               args.Role,
@@ -42,7 +49,14 @@ type RevokePermissionArgs struct {
 	PermissionId string
 }
 
+func (args *RevokePermissionArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.FileId = finder.SecureFileId(args.FileId)
+}
+
 func (self *Drive) RevokePermission(args RevokePermissionArgs) error {
+	args.normalize(self)
+
 	err := self.service.Permissions.Delete(args.FileId, args.PermissionId).Do()
 	if err != nil {
 		return fmt.Errorf("Failed to revoke permission: %s", err)
@@ -57,7 +71,14 @@ type ListPermissionsArgs struct {
 	FileId string
 }
 
+func (args *ListPermissionsArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.FileId = finder.SecureFileId(args.FileId)
+}
+
 func (self *Drive) ListPermissions(args ListPermissionsArgs) error {
+	args.normalize(self)
+
 	permList, err := self.service.Permissions.List(args.FileId).Fields("permissions(id,role,type,domain,emailAddress,allowFileDiscovery)").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to list permissions: %s", err)

@@ -24,7 +24,14 @@ type ExportArgs struct {
 	Force      bool
 }
 
+func (args *ExportArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.Id = finder.SecureFileId(args.Id)
+}
+
 func (self *Drive) Export(args ExportArgs) error {
+	args.normalize(self)
+
 	f, err := self.service.Files.Get(args.Id).Fields("name", "mimeType").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)

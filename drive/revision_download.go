@@ -19,7 +19,13 @@ type DownloadRevisionArgs struct {
 	Timeout    time.Duration
 }
 
+func (args *DownloadRevisionArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.FileId = finder.SecureFileId(args.FileId)
+}
+
 func (self *Drive) DownloadRevision(args DownloadRevisionArgs) (err error) {
+	args.normalize(self)
 	getRev := self.service.Revisions.Get(args.FileId, args.RevisionId)
 
 	rev, err := getRev.Fields("originalFilename").Do()

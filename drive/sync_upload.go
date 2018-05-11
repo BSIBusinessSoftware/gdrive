@@ -26,7 +26,14 @@ type UploadSyncArgs struct {
 	Comparer         FileComparer
 }
 
+func (args *UploadSyncArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.RootId = finder.SecureFileId(args.RootId)
+}
+
 func (self *Drive) UploadSync(args UploadSyncArgs) error {
+	args.normalize(self)
+
 	if args.ChunkSize > intMax()-1 {
 		return fmt.Errorf("Chunk size is to big, max chunk size for this computer is %d", intMax()-1)
 	}

@@ -11,7 +11,14 @@ type DeleteRevisionArgs struct {
 	RevisionId string
 }
 
+func (args *DeleteRevisionArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.FileId = finder.SecureFileId(args.FileId)
+}
+
 func (self *Drive) DeleteRevision(args DeleteRevisionArgs) (err error) {
+	args.normalize(self)
+
 	rev, err := self.service.Revisions.Get(args.FileId, args.RevisionId).Fields("originalFilename").Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get revision: %s", err)

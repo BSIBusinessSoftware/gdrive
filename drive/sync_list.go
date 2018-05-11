@@ -2,11 +2,12 @@ package drive
 
 import (
 	"fmt"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 	"io"
 	"sort"
 	"text/tabwriter"
+
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 )
 
 type ListSyncArgs struct {
@@ -36,7 +37,14 @@ type ListRecursiveSyncArgs struct {
 	SortOrder   string
 }
 
+func (args *ListRecursiveSyncArgs) normalize(drive *Drive) {
+	finder := drive.newPathFinder()
+	args.RootId = finder.SecureFileId(args.RootId)
+}
+
 func (self *Drive) ListRecursiveSync(args ListRecursiveSyncArgs) error {
+	args.normalize(self)
+
 	rootDir, err := self.getSyncRoot(args.RootId)
 	if err != nil {
 		return err

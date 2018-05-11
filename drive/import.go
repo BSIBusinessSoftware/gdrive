@@ -17,7 +17,21 @@ type ImportArgs struct {
 	Parents  []string
 }
 
+func (args *ImportArgs) normalize(drive *Drive) {
+	if len(args.Parents) > 0 {
+		var ids []string
+		finder := drive.newPathFinder()
+		for _, parent := range args.Parents {
+			id := finder.SecureFileId(parent)
+			ids = append(ids, id)
+		}
+		args.Parents = ids
+	}
+}
+
 func (self *Drive) Import(args ImportArgs) error {
+	args.normalize(self)
+
 	fromMime := args.Mime
 	if fromMime == "" {
 		fromMime = getMimeType(args.Path)
