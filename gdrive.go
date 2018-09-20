@@ -383,6 +383,54 @@ func main() {
 			},
 		},
 		&cli.Handler{
+			Pattern:     "[global] updateStdin [options] <fileId>",
+			Description: "Update file from stdin, this creates a new revision of the file",
+			Callback:    updateStdinHandler,
+			FlagGroups: cli.FlagGroups{
+				cli.NewFlagGroup("global", globalFlags...),
+				cli.NewFlagGroup("options",
+					cli.StringSliceFlag{
+						Name:        "parent",
+						Patterns:    []string{"-p", "--parent"},
+						Description: "Parent id, used to upload file to a specific directory, can be specified multiple times to give many parents",
+					},
+					cli.StringFlag{
+						Name:        "name",
+						Patterns:    []string{"--name"},
+						Description: "Filename",
+					},
+					cli.StringFlag{
+						Name:        "description",
+						Patterns:    []string{"--description"},
+						Description: "File description",
+					},
+					cli.BoolFlag{
+						Name:        "noProgress",
+						Patterns:    []string{"--no-progress"},
+						Description: "Hide progress",
+						OmitValue:   true,
+					},
+					cli.StringFlag{
+						Name:        "mime",
+						Patterns:    []string{"--mime"},
+						Description: "Force mime type",
+					},
+					cli.IntFlag{
+						Name:         "timeout",
+						Patterns:     []string{"--timeout"},
+						Description:  fmt.Sprintf("Set timeout in seconds, use 0 for no timeout. Timeout is reached when no data is transferred in set amount of seconds, default: %d", DefaultTimeout),
+						DefaultValue: DefaultTimeout,
+					},
+					cli.IntFlag{
+						Name:         "chunksize",
+						Patterns:     []string{"--chunksize"},
+						Description:  fmt.Sprintf("Set chunk size in bytes, default: %d", DefaultUploadChunkSize),
+						DefaultValue: DefaultUploadChunkSize,
+					},
+				),
+			},
+		},
+		&cli.Handler{
 			Pattern:     "[global] info [options] <fileId>",
 			Description: "Show file info",
 			Callback:    infoHandler,

@@ -24,6 +24,20 @@ type UpdateArgs struct {
 	Timeout     time.Duration
 }
 
+type UpdateStreamArgs struct {
+	Out         io.Writer
+	Progress    io.Writer
+	Id          string
+	In          io.Reader
+	Name        string
+	Description string
+	Parents     []string
+	Mime        string
+	Recursive   bool
+	ChunkSize   int64
+	Timeout     time.Duration
+}
+
 func (self *Drive) Update(args UpdateArgs) error {
 	srcFile, srcFileInfo, err := openFile(args.Path)
 	if err != nil {
@@ -70,6 +84,58 @@ func (self *Drive) Update(args UpdateArgs) error {
 			return fmt.Errorf("Failed to upload file: timeout, no data was transferred for %v", args.Timeout)
 		}
 		return fmt.Errorf("Failed to upload file: %s", err)
+	}
+
+	// Calculate average upload rate
+	rate := calcRate(f.Size, started, time.Now())
+
+	fmt.Fprintf(args.Out, "Updated %s at %s/s, total %s\n", f.Id, formatSize(rate, false), formatSize(f.Size, false))
+	return nil
+}
+
+func (self *Drive) UpdateStream(args UpdateStreamArgs) error {
+	if args.In == nil {
+		return fmt.Errorf("no input stream supplied")
+	}
+
+	// Instantiate empty drive file
+	dstFile := &drive.File{Description: args.Description}
+
+	// Use provided file name
+	if args.Name == "" {
+		return fmt.Errorf("no update file name supplied")
+	} else {
+		dstFile.Name = args.Name
+	}
+
+	// Set provided mime type or get type based on file extension
+	if args.Mime == "" {
+		dstFile.MimeType = mime.TypeByExtension(filepath.Ext(dstFile.Name))
+	} else {
+		dstFile.MimeType = args.Mime
+	}
+
+	// Set parent folders
+	dstFile.Parents = args.Parents
+
+	// Chunk size option
+	chunkSize := googleapi.ChunkSize(int(args.ChunkSize))
+
+	// Wrap file in progress reader
+	progressReader := getProgressReader(args.In, args.Progress, 0)
+
+	// Wrap reader in timeout reader
+	reader, ctx := getTimeoutReaderContext(progressReader, args.Timeout)
+
+	fmt.Fprintf(args.Out, "Uploading %s\n", args.Name)
+	started := time.Now()
+
+	f, err := self.service.Files.Update(args.Id, dstFile).Fields("id", "name", "size").Context(ctx).Media(reader, chunkSize).Do()
+	if err != nil {
+		if isTimeoutError(err) {
+			return fmt.Errorf("failed to upload file: timeout, no data was transferred for %v", args.Timeout)
+		}
+		return fmt.Errorf("failed to upload file: %s", err)
 	}
 
 	// Calculate average upload rate

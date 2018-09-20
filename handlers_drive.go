@@ -193,6 +193,23 @@ func updateHandler(ctx cli.Context) {
 	checkErr(err)
 }
 
+func updateStdinHandler(ctx cli.Context) {
+	args := ctx.Args()
+	err := newDrive(args).UpdateStream(drive.UpdateStreamArgs{
+		In:          os.Stdin,
+		Out:         os.Stdout,
+		Id:          args.String("fileId"),
+		Name:        args.String("name"),
+		Description: args.String("description"),
+		Parents:     args.StringSlice("parent"),
+		Mime:        args.String("mime"),
+		Progress:    progressWriter(args.Bool("noProgress")),
+		ChunkSize:   args.Int64("chunksize"),
+		Timeout:     durationInSeconds(args.Int64("timeout")),
+	})
+	checkErr(err)
+}
+
 func infoHandler(ctx cli.Context) {
 	args := ctx.Args()
 	err := newDrive(args).Info(drive.FileInfoArgs{
